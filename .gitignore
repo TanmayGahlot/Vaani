@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+
+# Expo / React Native generated files
+.expo/
+dist/
+
+# Android build and Gradle state
+android/.gradle/
+android/build/
+android/app/build/
+android/app/.cxx/
+*.keystore
+!android/app/debug.keystore
+
+# iOS build products and CocoaPods
+ios/build/
+ios/Pods/
+
+# Xcode
+*.xcworkspace/xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+
+# Logs and OS files
+*.log
+.DS_Store
+
+# Environment overrides
+.env
+.env.*
+!.env.example
