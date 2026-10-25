@@ -35,17 +35,24 @@ export const colors = {
 } as const;
 
 export const typography = {
-  sizes: {
-    body: 16,
-    caption: 12,
-    subtitle: 20,
-  },
   h1: { fontSize: 32 },
   h2: { fontSize: 24 },
   h3: { fontSize: 20 },
+  title: { fontSize: 20 },
+  subtitle: { fontSize: 18 },
   body: { fontSize: 16 },
   caption: { fontSize: 12 },
   small: { fontSize: 10 },
+  sizes: {
+    h1: 32,
+    h2: 24,
+    h3: 20,
+    title: 20,
+    subtitle: 18,
+    body: 16,
+    caption: 12,
+    small: 10,
+  },
 } as const;
 
 export const spacing = {

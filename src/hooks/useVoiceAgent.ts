@@ -24,7 +24,7 @@ export function useVoiceAgent() {
   const [error, setError] = useState<string | null>(null);
   const [lastTranscript, setLastTranscript] = useState<string>('');
 
-  const listeningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const listeningTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /**
    * Process a text command directly (e.g. from chat input or STT)
@@ -77,7 +77,7 @@ export function useVoiceAgent() {
   );
 
   /**
-   * Stop listening and trigger transcription & action
+   * Stop listening manually
    */
   const stopListening = useCallback(async () => {
     if (listeningTimeoutRef.current) {
@@ -87,18 +87,13 @@ export function useVoiceAgent() {
 
     try {
       setListeningInStore(false);
-      setProcessingInStore(true);
-
-      const sttResult = await SpeechService.stopRecording();
-      setLastTranscript(sttResult.text);
-
-      await processVoiceCommand(sttResult.text);
+      await SpeechService.stopRecording();
     } catch (err: any) {
       console.error('[useVoiceAgent] Error during voice processing:', err);
       setListeningInStore(false);
       setProcessingInStore(false);
     }
-  }, [setListeningInStore, setProcessingInStore, processVoiceCommand]);
+  }, [setListeningInStore, setProcessingInStore]);
 
   /**
    * Start listening to voice from mic
@@ -106,19 +101,59 @@ export function useVoiceAgent() {
   const startListening = useCallback(async () => {
     try {
       setError(null);
+      setLastTranscript('');
       setListeningInStore(true);
+      SpeechService.setLanguage(selectedLanguage);
+
+      SpeechService.setOnPartialListener((partial) => {
+        setLastTranscript(partial);
+      });
+
+      SpeechService.setOnResultListener(async (finalText) => {
+        setListeningInStore(false);
+        if (listeningTimeoutRef.current) {
+          clearTimeout(listeningTimeoutRef.current);
+          listeningTimeoutRef.current = null;
+        }
+
+        if (finalText && finalText.trim()) {
+          setLastTranscript(finalText);
+          await processVoiceCommand(finalText);
+        } else {
+          setProcessingInStore(false);
+          setError('No voice detected. Tap a quick command or try speaking into your mic.');
+        }
+      });
+
+      SpeechService.setOnErrorListener((errMsg) => {
+        setListeningInStore(false);
+        setProcessingInStore(false);
+        if (listeningTimeoutRef.current) {
+          clearTimeout(listeningTimeoutRef.current);
+          listeningTimeoutRef.current = null;
+        }
+        setError(errMsg);
+      });
+
       await SpeechService.startRecording();
 
-      // Automatically stop after 4.5 seconds if speech pause occurs
+      // Safety timeout after 10 seconds of silence
       listeningTimeoutRef.current = setTimeout(() => {
         stopListening();
-      }, 4500);
+      }, 10000);
     } catch (err: any) {
       console.error('[useVoiceAgent] Failed to start microphone:', err);
       setListeningInStore(false);
       setError(err?.message || 'Microphone error');
     }
-  }, [setListeningInStore, stopListening]);
+  }, [selectedLanguage, setListeningInStore, setProcessingInStore, processVoiceCommand, stopListening]);
+
+  /**
+   * Clear active error message
+   */
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
 
   /**
    * Toggle listening state
@@ -137,6 +172,7 @@ export function useVoiceAgent() {
     isSpeaking,
     error,
     lastTranscript,
+    clearError,
     startListening,
     stopListening,
     toggleListening,

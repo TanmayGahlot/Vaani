@@ -96,14 +96,12 @@ const LanguageCard: React.FC<LanguageCardProps> = ({
         <Animated.View
           style={[
             styles.codeBadge,
+            isSelected ? styles.codeBadgeSelected : styles.codeBadgeUnselected,
             {
               opacity: selectionAnim.interpolate({
                 inputRange: [0, 1],
                 outputRange: [0.5, 1],
               }),
-              backgroundColor: isSelected
-                ? 'rgba(108, 99, 255, 0.25)'
-                : 'rgba(255, 255, 255, 0.06)',
             },
           ]}
         >
@@ -162,6 +160,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,
+  },
+  codeBadgeSelected: {
+    backgroundColor: 'rgba(108, 99, 255, 0.25)',
+  },
+  codeBadgeUnselected: {
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
   },
   codeText: {
     color: colors.textSecondary,

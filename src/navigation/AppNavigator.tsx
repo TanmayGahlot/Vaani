@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { DarkTheme, NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAppStore } from '../store/appStore';
 import { colors } from '../theme/theme';

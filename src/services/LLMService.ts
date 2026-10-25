@@ -90,7 +90,7 @@ class LLMService {
     }
 
     // Realistic rule & semantic simulation for testing and offline development
-    await new Promise((r) => setTimeout(r, 650));
+    await new Promise<void>((r) => setTimeout(() => r(), 650));
     const action = this.resolveIntentLocally(userInput, language);
 
     return {
@@ -112,7 +112,7 @@ class LLMService {
     const simulatedTokens = ['नमस्ते! ', 'मैं ', 'वाणी ', 'हूँ। ', 'आपका ', 'काम ', 'हो गया।'];
 
     for (const token of simulatedTokens) {
-      await new Promise((r) => setTimeout(r, 60));
+      await new Promise<void>((r) => setTimeout(() => r(), 60));
       onToken(token);
     }
 
@@ -147,47 +147,115 @@ class LLMService {
    * Intent resolver for voice phone commands across Hindi and English
    */
   private resolveIntentLocally(query: string, lang: string): LLMAction {
-    const lower = query.toLowerCase();
+    const trimmed = query.trim();
+    const lower = trimmed.toLowerCase();
 
-    // Call intent
-    if (lower.includes('call') || lower.includes('फोन') || lower.includes('कॉल')) {
-      const contact = lower.includes('माँ') || lower.includes('mom') || lower.includes('मां') ? 'Mom' : 'Contact';
+    // Time / Date intent
+    if (
+      lower.includes('time') ||
+      lower.includes('समय') ||
+      lower.includes('बजे') ||
+      lower.includes('date') ||
+      lower.includes('तारीख')
+    ) {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      return {
+        type: ACTION_TYPES.GENERAL_RESPONSE,
+        params: { query: trimmed },
+        responseText: lang === 'hi'
+          ? `अभी समय ${timeStr} हुआ है।`
+          : `The current time is ${timeStr}.`,
+      };
+    }
+
+    // Identity / Who are you
+    if (
+      lower.includes('who are you') ||
+      lower.includes('your name') ||
+      lower.includes('कौैन हो') ||
+      lower.includes('कौन हो') ||
+      lower.includes('नाम क्या है')
+    ) {
+      return {
+        type: ACTION_TYPES.GENERAL_RESPONSE,
+        params: { query: trimmed },
+        responseText: lang === 'hi'
+          ? 'नमस्ते! मैं वाणी हूँ, आपकी 100% ऑफ़लाइन AI वॉइस असिस्टेंट।'
+          : 'Hello! I am Vaani, your 100% offline AI voice assistant.',
+      };
+    }
+
+    // Greeting
+    if (
+      lower === 'hi' ||
+      lower === 'hello' ||
+      lower === 'hey' ||
+      lower === 'नमस्ते' ||
+      lower.includes('how are you') ||
+      lower.includes('कैसे हो') ||
+      lower.includes('कैसी हो')
+    ) {
+      return {
+        type: ACTION_TYPES.GENERAL_RESPONSE,
+        params: { query: trimmed },
+        responseText: lang === 'hi'
+          ? 'नमस्ते! मैं बिल्कुल ठीक हूँ। बताइए मैं आपके फ़ोन पर क्या काम करूँ?'
+          : 'Hello! I am doing well. How can I help you with your phone today?',
+      };
+    }
+
+    // Call intent with dynamic contact extraction
+    if (lower.includes('call') || lower.includes('फोन') || lower.includes('कॉल') || lower.includes('dial')) {
+      let contact = 'Mom';
+      const callMatch = trimmed.match(/(?:call|dial|phone|कॉल|फोन)\s+(?:to\s+)?([a-zA-Z0-9\u0900-\u097F]+)/i);
+      if (callMatch && callMatch[1]) {
+        contact = callMatch[1];
+      } else if (lower.includes('माँ') || lower.includes('मां') || lower.includes('mom') || lower.includes('mummy')) {
+        contact = 'Mom';
+      } else if (lower.includes('papa') || lower.includes('पिता') || lower.includes('dad')) {
+        contact = 'Dad';
+      }
+
       return {
         type: ACTION_TYPES.MAKE_CALL,
         params: { contact },
         responseText: lang === 'hi'
-          ? `${contact} को कॉल किया जा रहा है...`
+          ? `${contact} को कॉल लगाया जा रहा है...`
           : `Calling ${contact}...`,
       };
     }
 
-    // WhatsApp / Message intent
-    if (lower.includes('message') || lower.includes('संदेश') || lower.includes('whatsapp') || lower.includes('व्हाट्सएप')) {
-      return {
-        type: ACTION_TYPES.SEND_MESSAGE,
-        params: { contact: 'Rahul', message: 'मैं 10 मिनट में आ रहा हूं', app: 'whatsapp' },
-        responseText: lang === 'hi'
-          ? 'व्हाट्सएप संदेश भेज दिया गया है।'
-          : 'WhatsApp message has been sent.',
-      };
-    }
+    // App launch intent with dynamic app extraction
+    if (
+      lower.includes('open') ||
+      lower.includes('launch') ||
+      lower.includes('खोलो') ||
+      lower.includes('चलाओ') ||
+      lower.includes('start')
+    ) {
+      let target = 'Settings';
+      if (lower.includes('camera') || lower.includes('कैमरा') || lower.includes('photo')) {
+        target = 'Camera';
+      } else if (lower.includes('chrome') || lower.includes('browser') || lower.includes('इंटरनेट')) {
+        target = 'Chrome';
+      } else if (lower.includes('youtube') || lower.includes('यूट्यूब')) {
+        target = 'YouTube';
+      } else if (lower.includes('whatsapp') || lower.includes('व्हाट्सएप')) {
+        target = 'WhatsApp';
+      } else if (lower.includes('maps') || lower.includes('मैप्स') || lower.includes('नक्शा')) {
+        target = 'Maps';
+      } else if (lower.includes('messages') || lower.includes('संदेश')) {
+        target = 'Messages';
+      } else if (lower.includes('dialer') || lower.includes('phone')) {
+        target = 'Dialer';
+      } else {
+        const appMatch = trimmed.match(/(?:open|launch|start|खोलो|चलाओ)\s+([a-zA-Z0-9]+)/i);
+        if (appMatch && appMatch[1]) {
+          target = appMatch[1];
+        }
+      }
 
-    // Alarm intent
-    if (lower.includes('alarm') || lower.includes('अलार्म') || lower.includes('जगा')) {
-      return {
-        type: ACTION_TYPES.SET_ALARM,
-        params: { time: '07:00 AM', label: 'Morning' },
-        responseText: lang === 'hi'
-          ? 'कल सुबह 7 बजे का अलार्म सेट कर दिया गया है।'
-          : 'Alarm set for 7:00 AM tomorrow.',
-      };
-    }
-
-    // App launch intent
-    if (lower.includes('open') || lower.includes('खोलो') || lower.includes('चलाओ')) {
-      let target = 'YouTube';
-      if (lower.includes('camera') || lower.includes('कैमरा')) {target = 'Camera';}
-      if (lower.includes('settings') || lower.includes('सेटिंग्स')) {target = 'Settings';}
       return {
         type: ACTION_TYPES.OPEN_APP,
         params: { app_name: target },
@@ -197,22 +265,66 @@ class LLMService {
       };
     }
 
+    // WhatsApp / Message intent
+    if (
+      lower.includes('message') ||
+      lower.includes('संदेश') ||
+      lower.includes('whatsapp') ||
+      lower.includes('व्हाट्सएप')
+    ) {
+      let contact = 'Rahul';
+      let message = 'मैं 10 मिनट में आ रहा हूं';
+
+      const msgMatch = trimmed.match(/(?:tell|saying|message|to)\s+([a-zA-Z0-9]+)\s+(.+)/i);
+      if (msgMatch) {
+        contact = msgMatch[1];
+        message = msgMatch[2];
+      }
+
+      return {
+        type: ACTION_TYPES.SEND_MESSAGE,
+        params: { contact, message, app: 'whatsapp' },
+        responseText: lang === 'hi'
+          ? `${contact} को संदेश: "${message}" भेजा जा रहा है।`
+          : `Sending message to ${contact}: "${message}".`,
+      };
+    }
+
+    // Alarm intent
+    if (lower.includes('alarm') || lower.includes('अलार्म') || lower.includes('जगा')) {
+      let timeStr = '07:00 AM';
+      const timeMatch = trimmed.match(/(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/i);
+      if (timeMatch) {
+        timeStr = timeMatch[1].toUpperCase();
+      }
+
+      return {
+        type: ACTION_TYPES.SET_ALARM,
+        params: { time: timeStr, label: 'Vaani Alarm' },
+        responseText: lang === 'hi'
+          ? `${timeStr} का अलार्म सेट कर दिया गया है।`
+          : `Alarm set for ${timeStr}.`,
+      };
+    }
+
     // Translate intent
     if (lower.includes('translate') || lower.includes('अनुवाद')) {
       return {
         type: ACTION_TYPES.TRANSLATE,
-        params: { text: query, from: 'en', to: 'hi' },
-        responseText: 'अनुवाद: "यह एक सुंदर दिन है।"',
+        params: { text: trimmed, from: 'en', to: 'hi' },
+        responseText: lang === 'hi'
+          ? `अनुवाद: "${trimmed}"`
+          : `Translation: "${trimmed}"`,
       };
     }
 
-    // Default conversational response
+    // General conversational response reflecting the exact user utterance
     return {
       type: ACTION_TYPES.GENERAL_RESPONSE,
-      params: { query },
+      params: { query: trimmed },
       responseText: lang === 'hi'
-        ? `मैंने सुना: "${query}"। वाणी आपकी सेवा के लिए तैयार है।`
-        : `Understood: "${query}". Vaani is here to help you.`,
+        ? `मैंने सुना: "${trimmed}"। वाणी आपका यह काम कर रही है।`
+        : `Understood: "${trimmed}". Processing your request now.`,
     };
   }
 

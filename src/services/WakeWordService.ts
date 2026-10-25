@@ -57,7 +57,7 @@ class WakeWordService {
     // });
 
     // Mock: simulate initialization delay
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise<void>((resolve) => setTimeout(() => resolve(), 200));
 
     this.isInitialized = true;
     console.log('[WakeWordService] Initialized with config:', {
@@ -75,7 +75,7 @@ class WakeWordService {
    */
   async startListening(): Promise<void> {
     if (!this.isInitialized) {
-      throw new Error('[WakeWordService] Not initialized. Call initialize() first.');
+      await this.initialize(this.config);
     }
 
     if (this.isListening) {

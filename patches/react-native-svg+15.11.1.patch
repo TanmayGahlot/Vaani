@@ -1,0 +1,16 @@
+diff --git a/node_modules/react-native-svg/common/cpp/react/renderer/components/rnsvg/RNSVGLayoutableShadowNode.cpp b/node_modules/react-native-svg/common/cpp/react/renderer/components/rnsvg/RNSVGLayoutableShadowNode.cpp
+index a42fde9..d7478ec 100644
+--- a/node_modules/react-native-svg/common/cpp/react/renderer/components/rnsvg/RNSVGLayoutableShadowNode.cpp
++++ b/node_modules/react-native-svg/common/cpp/react/renderer/components/rnsvg/RNSVGLayoutableShadowNode.cpp
+@@ -24,7 +24,10 @@ void RNSVGLayoutableShadowNode::setZeroDimensions() {
+   // views in the layout inspector when Yoga attempts to interpret SVG
+   // properties like width when viewBox scale is set.
+   auto style = yogaNode_.style();
+-#if REACT_NATIVE_MINOR_VERSION >= 77
++#if REACT_NATIVE_MINOR_VERSION >= 79
++  style.setDimension(yoga::Dimension::Width, yoga::StyleSizeLength::points(0));
++  style.setDimension(yoga::Dimension::Height, yoga::StyleSizeLength::points(0));
++#elif REACT_NATIVE_MINOR_VERSION >= 77
+   style.setDimension(yoga::Dimension::Width, yoga::StyleLength::points(0));
+   style.setDimension(yoga::Dimension::Height, yoga::StyleLength::points(0));
+ #else

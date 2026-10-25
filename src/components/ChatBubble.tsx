@@ -1,10 +1,16 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, Animated, StyleSheet } from 'react-native';
 import { colors, spacing, typography } from '../theme/theme';
-import type { ConversationMessage } from '../store/appStore';
+
+interface Message {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp: number;
+}
 
 interface ChatBubbleProps {
-  message: ConversationMessage;
+  message: Message;
   isLatest: boolean;
 }
 

@@ -40,10 +40,14 @@ class VaaniWakeWordService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val notification = createForegroundNotification()
-        startForeground(NOTIFICATION_ID, notification)
-
-        startListeningLoop()
-        return START_STICKY
+        try {
+            startForeground(NOTIFICATION_ID, notification)
+            startListeningLoop()
+        } catch (e: Exception) {
+            android.util.Log.e("VaaniWakeWordService", "Could not start foreground service: ${e.message}", e)
+            stopSelf()
+        }
+        return START_NOT_STICKY
     }
 
     private fun startListeningLoop() {

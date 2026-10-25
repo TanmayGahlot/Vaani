@@ -1,32 +1,61 @@
-# Dependencies
-node_modules/
-
-# Expo / React Native generated files
-.expo/
-dist/
-
-# Android build and Gradle state
-android/.gradle/
-android/build/
-android/app/build/
-android/app/.cxx/
-*.keystore
-!android/app/debug.keystore
-
-# iOS build products and CocoaPods
-ios/build/
-ios/Pods/
-
-# Xcode
-*.xcworkspace/xcuserdata/
-*.xcuserstate
-*.xcscmblueprint
-
-# Logs and OS files
-*.log
+# OSX
 .DS_Store
 
-# Environment overrides
-.env
-.env.*
-!.env.example
+# Xcode
+build/
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+xcuserdata
+*.xccheckout
+*.moved-aside
+DerivedData
+*.hmap
+*.ipa
+*.xcuserstate
+project.xcworkspace
+
+# Android/IntelliJ
+build/
+.idea
+.gradle
+local.properties
+*.iml
+*.hprof
+.cxx/
+*.apk
+*.aab
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# BUCK
+buck-out/
+\.buckd/
+*.keystore
+!debug.keystore
+
+# Fastlane
+*/fastlane/report.xml
+*/fastlane/Preview.html
+*/fastlane/screenshots
+*/fastlane/test_output
+
+# Bundle artifact
+*.jsbundle
+
+# CocoaPods
+/ios/Pods/
+/vendor/bundle/
+
+# Temporary files
+*~
+*.swp
+*.orig

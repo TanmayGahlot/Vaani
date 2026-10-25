@@ -32,6 +32,7 @@ interface Props {
 
 export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const [inputText, setInputText] = useState('');
+  const scrollViewRef = React.useRef<ScrollView>(null);
   const [activeOverlayNotification, setActiveOverlayNotification] = useState<{
     sender: string;
     message: string;
@@ -49,6 +50,9 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const {
     isListening,
     isProcessing,
+    lastTranscript,
+    error,
+    clearError,
     toggleListening,
     processVoiceCommand,
   } = useVoiceAgent();
@@ -59,14 +63,26 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
     toggleListening();
   });
 
+  const VOICE_SUGGESTIONS = [
+    { id: '1', emoji: '🕒', label: 'What time is it?', query: 'What is the current time?' },
+    { id: '2', emoji: '⚙️', label: 'Open Settings', query: 'Open Settings' },
+    { id: '3', emoji: '📷', label: 'Open Camera', query: 'Open Camera' },
+    { id: '4', emoji: '📞', label: 'Call Dad', query: 'Call Dad' },
+    { id: '5', emoji: '💬', label: 'WhatsApp Rahul', query: 'Send WhatsApp message to Rahul' },
+    { id: '6', emoji: '⏰', label: 'Alarm 7 AM', query: 'Set alarm for 7 AM' },
+    { id: '7', emoji: '🌐', label: 'Translate Hello', query: 'Translate Hello to Hindi' },
+  ];
+
   const handleSendText = () => {
     if (!inputText.trim()) {return;}
     const text = inputText;
     setInputText('');
+    clearError();
     processVoiceCommand(text);
   };
 
-  const handleQuickAction = (actionTitle: string, promptTemplate: string) => {
+  const handleQuickAction = (_actionTitle: string, promptTemplate: string) => {
+    clearError();
     processVoiceCommand(promptTemplate);
   };
 
@@ -96,9 +112,11 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
       </View>
 
       <ScrollView
+        ref={scrollViewRef}
         style={styles.mainScrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
       >
         {/* Siri / Notification Floating Pill Banner (From Reference Image 1) */}
         {activeOverlayNotification && (
@@ -150,7 +168,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
             onPress={() => handleQuickAction('Translate', 'Translate how are you to Hindi')}
             activeOpacity={0.7}
           >
-            <View style={[styles.iconBadge, { backgroundColor: 'rgba(66, 133, 244, 0.15)' }]}>
+            <View style={[styles.iconBadge, styles.iconBadgeBlue]}>
               <Text style={styles.cardEmoji}>🌐</Text>
             </View>
             <Text style={styles.cardTitle}>Translate</Text>
@@ -163,7 +181,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
             onPress={toggleListening}
             activeOpacity={0.7}
           >
-            <View style={[styles.iconBadge, { backgroundColor: 'rgba(108, 99, 255, 0.15)' }]}>
+            <View style={[styles.iconBadge, styles.iconBadgePurple]}>
               <Text style={styles.cardEmoji}>🎙️</Text>
             </View>
             <Text style={styles.cardTitle}>Audio Chat</Text>
@@ -176,7 +194,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
             onPress={() => handleQuickAction('Call', 'Call Mom right now')}
             activeOpacity={0.7}
           >
-            <View style={[styles.iconBadge, { backgroundColor: 'rgba(76, 175, 80, 0.15)' }]}>
+            <View style={[styles.iconBadge, styles.iconBadgeGreen]}>
               <Text style={styles.cardEmoji}>📞</Text>
             </View>
             <Text style={styles.cardTitle}>Voice Call</Text>
@@ -189,7 +207,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
             onPress={() => handleQuickAction('Open WhatsApp', 'Open WhatsApp and send message')}
             activeOpacity={0.7}
           >
-            <View style={[styles.iconBadge, { backgroundColor: 'rgba(0, 217, 255, 0.15)' }]}>
+            <View style={[styles.iconBadge, styles.iconBadgeCyan]}>
               <Text style={styles.cardEmoji}>📱</Text>
             </View>
             <Text style={styles.cardTitle}>Phone Control</Text>
@@ -201,7 +219,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
         {currentAction && (
           <View style={[styles.actionBanner, glassCardElevated]}>
             <Text style={styles.actionBannerEmoji}>⚡</Text>
-            <View style={{ flex: 1 }}>
+            <View style={styles.actionBannerContent}>
               <Text style={styles.actionBannerTitle}>Automating Action</Text>
               <Text style={styles.actionBannerDetail}>
                 {currentAction.type}: {currentAction.responseText}
@@ -216,7 +234,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
           {conversationHistory.length === 0 ? (
             <View style={[styles.emptyChatCard, glassCard]}>
               <Text style={styles.emptyChatText}>
-                No messages yet. Say "Vaani" or tap the microphone below to begin.
+                No messages yet. Say "Vaani", tap the mic, or tap any quick suggestion below!
               </Text>
             </View>
           ) : (
@@ -231,15 +249,62 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
         </View>
       </ScrollView>
 
-      {/* Siri-Style Bottom Translucent Bar (Image 1 Style) */}
+      {/* Siri-Style Bottom Translucent Bar */}
       <View style={styles.bottomBarContainer}>
-        {/* Glow backdrop */}
+        {/* Horizontal Quick Voice Suggestions */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.suggestionScroll}
+          contentContainerStyle={styles.suggestionScrollContent}
+        >
+          {VOICE_SUGGESTIONS.map((item) => (
+            <TouchableOpacity
+              key={item.id}
+              style={[styles.suggestionChip, glassCard]}
+              onPress={() => {
+                clearError();
+                processVoiceCommand(item.query);
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.suggestionEmoji}>{item.emoji}</Text>
+              <Text style={styles.suggestionLabel}>{item.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {/* Glow backdrop during active speech recognition */}
         {isListening && (
           <View style={styles.listeningGlowBackdrop}>
             <WaveformVisualizer isActive={true} color={colors.accent} />
             <Text style={styles.listeningStatusText}>
-              Listening in {selectedLanguage.toUpperCase()}... Say "Vaani" or speak your command
+              {lastTranscript
+                ? `"${lastTranscript}"`
+                : `Listening in ${selectedLanguage.toUpperCase()}... Speak your command`}
             </Text>
+          </View>
+        )}
+
+        {/* Friendly Error / Fallback Banner with One-Tap Sample & Dismiss */}
+        {error && !isListening && (
+          <View style={[styles.errorCard, glassCardElevated]}>
+            <View style={styles.errorHeaderRow}>
+              <Text style={styles.errorTitle}>⚠️ {error}</Text>
+              <TouchableOpacity onPress={clearError} style={styles.dismissButton}>
+                <Text style={styles.dismissButtonText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity
+              style={styles.errorActionBtn}
+              onPress={() => {
+                clearError();
+                processVoiceCommand('What is the current time?');
+              }}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.errorActionBtnText}>▶️ Tap to Test: "What is the time?"</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -335,7 +400,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: 120,
+    paddingBottom: 220,
     paddingTop: spacing.sm,
   },
   notificationCard: {
@@ -431,6 +496,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.sm,
   },
+  iconBadgeBlue: {
+    backgroundColor: 'rgba(66, 133, 244, 0.15)',
+  },
+  iconBadgePurple: {
+    backgroundColor: 'rgba(108, 99, 255, 0.15)',
+  },
+  iconBadgeGreen: {
+    backgroundColor: 'rgba(76, 175, 80, 0.15)',
+  },
+  iconBadgeCyan: {
+    backgroundColor: 'rgba(0, 217, 255, 0.15)',
+  },
   cardEmoji: {
     fontSize: 22,
   },
@@ -459,6 +536,9 @@ const styles = StyleSheet.create({
   actionBannerEmoji: {
     fontSize: 24,
     marginRight: spacing.md,
+  },
+  actionBannerContent: {
+    flex: 1,
   },
   actionBannerTitle: {
     ...typography.caption,
@@ -496,8 +576,11 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     paddingHorizontal: spacing.md,
+    paddingTop: spacing.xs,
     paddingBottom: spacing.lg,
-    backgroundColor: 'transparent',
+    backgroundColor: 'rgba(10, 10, 15, 0.94)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.08)',
   },
   listeningGlowBackdrop: {
     backgroundColor: 'rgba(10, 10, 15, 0.92)',
@@ -513,6 +596,16 @@ const styles = StyleSheet.create({
     color: colors.accent,
     fontWeight: '600',
     marginTop: spacing.xs,
+  },
+  errorBackdrop: {
+    borderColor: colors.warning,
+    paddingVertical: spacing.sm,
+  },
+  errorText: {
+    ...typography.caption,
+    color: colors.warning,
+    textAlign: 'center',
+    fontWeight: '500',
   },
   inputGlassBar: {
     flexDirection: 'row',
@@ -548,5 +641,76 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 18,
     fontWeight: '700',
+  },
+  suggestionScroll: {
+    marginBottom: spacing.xs,
+  },
+  suggestionScrollContent: {
+    paddingHorizontal: 2,
+    gap: 8,
+  },
+  suggestionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 7,
+    paddingHorizontal: 13,
+    borderRadius: borderRadius.full,
+    backgroundColor: 'rgba(20, 22, 35, 0.92)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.18)',
+  },
+  suggestionEmoji: {
+    fontSize: 13,
+    marginRight: 5,
+  },
+  suggestionLabel: {
+    ...typography.caption,
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  errorCard: {
+    backgroundColor: 'rgba(28, 20, 20, 0.95)',
+    borderWidth: 1,
+    borderColor: colors.warning,
+    borderRadius: borderRadius.md,
+    padding: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  errorHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  errorTitle: {
+    ...typography.caption,
+    color: colors.warning,
+    fontWeight: '600',
+    flex: 1,
+    marginRight: spacing.xs,
+  },
+  dismissButton: {
+    padding: 4,
+  },
+  dismissButtonText: {
+    color: colors.textMuted,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  errorActionBtn: {
+    marginTop: 6,
+    backgroundColor: 'rgba(255, 179, 0, 0.15)',
+    borderWidth: 1,
+    borderColor: colors.warning,
+    borderRadius: borderRadius.sm,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+  },
+  errorActionBtnText: {
+    ...typography.caption,
+    color: colors.text,
+    fontWeight: '700',
+    fontSize: 11,
   },
 });

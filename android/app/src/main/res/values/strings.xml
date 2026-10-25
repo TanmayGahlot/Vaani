@@ -1,4 +1,4 @@
 <resources>
-  <string name="app_name">Vaani</string>
-  <string name="accessibility_service_description">Vaani Accessibility Service allows voice commands to navigate, click buttons, and operate apps hands-free for accessibility.</string>
+    <string name="app_name">Vaani</string>
+    <string name="accessibility_service_description">Vaani Accessibility Service allows voice commands to navigate, click buttons, and operate apps hands-free for accessibility.</string>
 </resources>

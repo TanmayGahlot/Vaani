@@ -44,7 +44,7 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
           <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Settings</Text>
-        <View style={{ width: 36 }} />
+        <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -66,7 +66,7 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
         {/* Wake Word Section */}
         <Text style={styles.sectionHeader}>Voice Activation</Text>
         <View style={[styles.itemCard, glassCard]}>
-          <View style={{ flex: 1, marginRight: spacing.md }}>
+          <View style={styles.itemTextContainerWithMargin}>
             <Text style={styles.itemTitle}>"Vaani" Wake Word</Text>
             <Text style={styles.itemSubtitle}>
               Wake the assistant automatically anytime by saying "Vaani"
@@ -86,7 +86,7 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
           style={[styles.itemCard, glassCard]}
           onPress={() => PhoneActionService.openAccessibilitySettings()}
         >
-          <View style={{ flex: 1 }}>
+          <View style={styles.itemTextContainer}>
             <Text style={styles.itemTitle}>Android Accessibility Service</Text>
             <Text style={styles.itemSubtitle}>
               Required for hands-free WhatsApp messaging, calls & app control
@@ -98,7 +98,7 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
         {/* Offline Models Info */}
         <Text style={styles.sectionHeader}>Offline AI Models</Text>
         <View style={[styles.itemCard, glassCard]}>
-          <View style={{ flex: 1 }}>
+          <View style={styles.itemTextContainer}>
             <Text style={styles.itemTitle}>Gemma 4 Edge LLM (Q4_K_M)</Text>
             <Text style={styles.itemSubtitle}>2.14 GB • Loaded in RAM via llama.rn</Text>
           </View>
@@ -106,7 +106,7 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
         </View>
 
         <View style={[styles.itemCard, glassCard]}>
-          <View style={{ flex: 1 }}>
+          <View style={styles.itemTextContainer}>
             <Text style={styles.itemTitle}>Whisper Multilingual STT</Text>
             <Text style={styles.itemSubtitle}>75.4 MB • Offline on-device</Text>
           </View>
@@ -172,6 +172,16 @@ const styles = StyleSheet.create({
     ...typography.h3,
     color: colors.text,
     fontWeight: '700',
+  },
+  headerSpacer: {
+    width: 36,
+  },
+  itemTextContainer: {
+    flex: 1,
+  },
+  itemTextContainerWithMargin: {
+    flex: 1,
+    marginRight: spacing.md,
   },
   content: {
     paddingHorizontal: spacing.lg,

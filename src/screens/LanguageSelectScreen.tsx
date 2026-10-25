@@ -33,8 +33,18 @@ export const LanguageSelectScreen: React.FC<Props> = ({ navigation }) => {
     setLanguageInStore(lang.code);
   };
 
+  const isSetupComplete = useAppStore((state) => state.isSetupComplete);
+
   const handleContinue = () => {
-    navigation.navigate('ModelDownload');
+    if (isSetupComplete) {
+      if (navigation.canGoBack()) {
+        navigation.goBack();
+      } else {
+        navigation.navigate('Home');
+      }
+    } else {
+      navigation.navigate('ModelDownload');
+    }
   };
 
   return (

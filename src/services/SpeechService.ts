@@ -1,7 +1,11 @@
 /**
- * SpeechService - Offline Multilingual Speech-to-Text
- * Powered by whisper.rn (GGML quantized models) with Vosk fallback
+ * SpeechService - Real Microphone Speech-to-Text
+ * Bridges to Android Native SpeechRecognizer for real-time mic audio recognition
  */
+
+import { NativeModules, NativeEventEmitter, Platform } from 'react-native';
+
+const { VaaniNativeModule } = NativeModules;
 
 export interface TranscriptionResult {
   text: string;
@@ -10,87 +14,84 @@ export interface TranscriptionResult {
   durationMs: number;
 }
 
-export interface SpeechConfig {
-  modelPath?: string;
-  language?: string;
-  beamSize?: number;
-  temperature?: number;
-}
-
 class SpeechService {
-  private isInitialized: boolean = false;
   private isRecording: boolean = false;
-  private currentLanguage: string = 'hi';
-  private modelPath: string | null = null;
+  private currentLanguage: string = 'en';
+  private lastRecognizedText: string = '';
+  private eventEmitter: NativeEventEmitter | null = null;
+  private startTime: number = 0;
 
-  /**
-   * Initialize Whisper / Vosk context with local quantized model
-   */
-  async initialize(modelPath: string, language: string = 'hi'): Promise<void> {
-    try {
-      this.modelPath = modelPath;
-      this.currentLanguage = language;
-      // In production:
-      // const { initWhisper } = require('whisper.rn');
-      // this.whisperContext = await initWhisper({ filePath: modelPath });
-      this.isInitialized = true;
-      console.log(`[SpeechService] Initialized with model: ${modelPath}, language: ${language}`);
-    } catch (error) {
-      console.error('[SpeechService] Initialization error:', error);
-      throw error;
+  private onResultCallback: ((text: string) => void) | null = null;
+  private onPartialCallback: ((text: string) => void) | null = null;
+  private onErrorCallback: ((error: string) => void) | null = null;
+
+  constructor() {
+    if (Platform.OS === 'android' && VaaniNativeModule) {
+      this.eventEmitter = new NativeEventEmitter(VaaniNativeModule);
+      this.setupEventListeners();
     }
   }
 
-  /**
-   * Start streaming audio recording from microphone (16kHz, 16-bit mono PCM)
-   */
-  async startRecording(): Promise<void> {
-    if (this.isRecording) {
+  private setupEventListeners(): void {
+    if (!this.eventEmitter) {
       return;
     }
-    this.isRecording = true;
-    console.log('[SpeechService] Started recording audio chunk...');
-  }
 
-  /**
-   * Stop recording and transcribe audio locally
-   */
-  async stopRecording(): Promise<TranscriptionResult> {
-    if (!this.isRecording) {
-      throw new Error('SpeechService was not recording');
-    }
-    this.isRecording = false;
+    this.eventEmitter.addListener('onSpeechResults', (event: { text?: string; matches?: string[] }) => {
+      const text = (event.text || (event.matches && event.matches[0]) || '').trim();
+      console.log(`[SpeechService] onSpeechResults: "${text}"`);
+      this.lastRecognizedText = text;
+      this.isRecording = false;
 
-    // Production: whisperContext.transcribe(pcmPath, { language: this.currentLanguage })
-    // Fallback/Simulated transcription for development preview
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          text: this.getSimulatedTranscription(this.currentLanguage),
-          language: this.currentLanguage,
-          confidence: 0.94,
-          durationMs: 1400,
-        });
-      }, 400);
+      if (this.onResultCallback) {
+        this.onResultCallback(text);
+      }
+    });
+
+    this.eventEmitter.addListener('onSpeechPartialResults', (event: { text?: string }) => {
+      const partial = (event.text || '').trim();
+      if (partial) {
+        this.lastRecognizedText = partial;
+        if (this.onPartialCallback) {
+          this.onPartialCallback(partial);
+        }
+      }
+    });
+
+    this.eventEmitter.addListener('onSpeechError', (event: { code: number; message: string }) => {
+      console.warn(`[SpeechService] onSpeechError: [${event.code}] ${event.message}`);
+      this.isRecording = false;
+
+      // If any words were already recognized during the session, process them!
+      if (this.lastRecognizedText && this.lastRecognizedText.trim().length > 0) {
+        console.log(`[SpeechService] Using captured partial speech despite error: "${this.lastRecognizedText}"`);
+        if (this.onResultCallback) {
+          this.onResultCallback(this.lastRecognizedText);
+        }
+        return;
+      }
+
+      if (this.onErrorCallback) {
+        const userMsg = event.code === 7
+          ? 'No speech detected. Tap a quick command or try speaking into your mic.'
+          : (event.message || 'Speech recognition error');
+        this.onErrorCallback(userMsg);
+      }
     });
   }
 
-  /**
-   * Transcribe an existing local audio file path
-   */
-  async transcribeAudio(audioPath: string): Promise<TranscriptionResult> {
-    console.log(`[SpeechService] Transcribing audio file at ${audioPath}`);
-    return {
-      text: 'व्हाट्सएप पर राहुल को संदेश भेजो',
-      language: this.currentLanguage,
-      confidence: 0.96,
-      durationMs: 1200,
-    };
+  setOnResultListener(listener: ((text: string) => void) | null): void {
+    this.onResultCallback = listener;
   }
 
-  /**
-   * Set target transcription language (e.g. 'hi', 'en', 'ta', 'te')
-   */
+  setOnPartialListener(listener: ((text: string) => void) | null): void {
+    this.onPartialCallback = listener;
+  }
+
+  setOnErrorListener(listener: ((error: string) => void) | null): void {
+    this.onErrorCallback = listener;
+  }
+
   setLanguage(languageCode: string): void {
     this.currentLanguage = languageCode;
   }
@@ -103,21 +104,65 @@ class SpeechService {
     return this.isRecording;
   }
 
-  async cleanup(): Promise<void> {
-    this.isRecording = false;
-    this.isInitialized = false;
+  /**
+   * Start live microphone speech recognition
+   */
+  async startRecording(): Promise<void> {
+    if (this.isRecording) {
+      return;
+    }
+
+    this.isRecording = true;
+    this.lastRecognizedText = '';
+    this.startTime = Date.now();
+
+    console.log(`[SpeechService] Starting microphone recognition for language: ${this.currentLanguage}`);
+
+    if (Platform.OS === 'android' && VaaniNativeModule?.startSpeechRecognition) {
+      try {
+        await VaaniNativeModule.startSpeechRecognition(this.currentLanguage);
+      } catch (err) {
+        console.error('[SpeechService] startSpeechRecognition failed:', err);
+        this.isRecording = false;
+        if (this.onErrorCallback) {
+          this.onErrorCallback('Could not open microphone');
+        }
+      }
+    }
   }
 
-  private getSimulatedTranscription(lang: string): string {
-    switch (lang) {
-      case 'hi':
-        return 'मां को फोन लगाओ और बोलो मैं 10 मिनट में आ रहा हूं';
-      case 'ta':
-        return 'அம்மாவுக்கு போன் பண்ணுங்க';
-      case 'te':
-        return 'అమ్మకు కాల్ చేయండి';
-      default:
-        return 'Open WhatsApp and send message to Mom';
+  /**
+   * Manually stop recording (forces recognition completion)
+   */
+  async stopRecording(): Promise<TranscriptionResult> {
+    this.isRecording = false;
+    console.log('[SpeechService] Stopping microphone recognition');
+
+    if (Platform.OS === 'android' && VaaniNativeModule?.stopSpeechRecognition) {
+      try {
+        await VaaniNativeModule.stopSpeechRecognition();
+      } catch (e) {
+        console.warn('[SpeechService] stopSpeechRecognition warning:', e);
+      }
+    }
+
+    return {
+      text: this.lastRecognizedText,
+      language: this.currentLanguage,
+      confidence: this.lastRecognizedText ? 0.95 : 0.0,
+      durationMs: Date.now() - this.startTime,
+    };
+  }
+
+  async cleanup(): Promise<void> {
+    this.isRecording = false;
+    this.onResultCallback = null;
+    this.onPartialCallback = null;
+    this.onErrorCallback = null;
+    if (Platform.OS === 'android' && VaaniNativeModule?.cancelSpeechRecognition) {
+      try {
+        await VaaniNativeModule.cancelSpeechRecognition();
+      } catch (_e) {}
     }
   }
 }

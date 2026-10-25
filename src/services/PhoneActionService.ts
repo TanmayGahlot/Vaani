@@ -186,10 +186,10 @@ class PhoneActionService {
    * Set countdown timer
    */
   async setTimer(seconds: number, label: string = 'Vaani Timer'): Promise<ActionResult> {
-    console.log(`[PhoneActionService] Setting timer "${label}" for ${seconds}s`);
+    console.log(`[PhoneActionService] Setting timer for ${seconds}s (${label})`);
     return {
       success: true,
-      message: `Timer set for ${Math.round(seconds / 60)} minutes`,
+      message: `Timer set for ${Math.round(seconds / 60)} minutes (${label})`,
     };
   }
 
